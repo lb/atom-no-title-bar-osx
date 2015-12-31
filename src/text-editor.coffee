@@ -934,10 +934,10 @@ class TextEditor extends Model
             range
         ).map (range) -> range.translate([-insertDelta, 0])
 
-        # Make sure the inserted text doesn't go into an existing fold
-        if fold = @displayBuffer.largestFoldStartingAtBufferRow(precedingBufferRow)
-          rangesToRefold.push(fold.getBufferRange().translate([linesRange.getRowCount() - 1, 0]))
-          fold.destroy()
+        # # Make sure the inserted text doesn't go into an existing fold
+        # if fold = @displayBuffer.largestFoldStartingAtBufferRow(precedingBufferRow)
+        #   rangesToRefold.push(fold.getBufferRange().translate([linesRange.getRowCount() - 1, 0]))
+        #   fold.destroy()
 
         # Delete lines spanned by selection and insert them on the preceding buffer row
         lines = @buffer.getTextInRange(linesRange)
@@ -947,7 +947,7 @@ class TextEditor extends Model
 
         # Restore folds that existed before the lines were moved
         for rangeToRefold in rangesToRefold
-          @displayBuffer.createFold(rangeToRefold.start.row, rangeToRefold.end.row)
+          @displayBuffer.foldBufferRowRange(rangeToRefold.start.row, rangeToRefold.end.row)
 
         for selection in selectionsToMove
           newSelectionRanges.push(selection.translate([-insertDelta, 0]))
@@ -1018,10 +1018,10 @@ class TextEditor extends Model
             range
         ).map (range) -> range.translate([insertDelta, 0])
 
-        # Make sure the inserted text doesn't go into an existing fold
-        if fold = @displayBuffer.largestFoldStartingAtBufferRow(followingBufferRow)
-          rangesToRefold.push(fold.getBufferRange().translate([insertDelta - 1, 0]))
-          fold.destroy()
+        # # Make sure the inserted text doesn't go into an existing fold
+        # if fold = @displayBuffer.largestFoldStartingAtBufferRow(followingBufferRow)
+        #   rangesToRefold.push(fold.getBufferRange().translate([insertDelta - 1, 0]))
+        #   fold.destroy()
 
         # Delete lines spanned by selection and insert them on the following correct buffer row
         insertPosition = new Point(selection.translate([insertDelta, 0]).start.row, 0)
@@ -1034,7 +1034,7 @@ class TextEditor extends Model
 
         # Restore folds that existed before the lines were moved
         for rangeToRefold in rangesToRefold
-          @displayBuffer.createFold(rangeToRefold.start.row, rangeToRefold.end.row)
+          @displayBuffer.foldBufferRowRange(rangeToRefold.start.row, rangeToRefold.end.row)
 
         for selection in selectionsToMove
           newSelectionRanges.push(selection.translate([insertDelta, 0]))
@@ -1067,7 +1067,7 @@ class TextEditor extends Model
         delta = endRow - startRow
         selection.setBufferRange(selectedBufferRange.translate([delta, 0]))
         for [foldStartRow, foldEndRow] in foldedRowRanges
-          @createFold(foldStartRow + delta, foldEndRow + delta)
+          @foldBufferRowRange(foldStartRow + delta, foldEndRow + delta)
       return
 
   replaceSelectedText: (options={}, fn) ->
@@ -2418,7 +2418,7 @@ class TextEditor extends Model
   # Returns the new {Selection}.
   addSelection: (marker, options={}) ->
     unless marker.getProperties().preserveFolds
-      @destroyFoldsContainingBufferRange(marker.getBufferRange())
+      @destroyFoldsIntersectingBufferRange(marker.getBufferRange())
     cursor = @addCursor(marker)
     selection = new Selection(_.extend({editor: this, marker, cursor, @clipboard}, options))
     @selections.push(selection)
@@ -2964,35 +2964,12 @@ class TextEditor extends Model
   isFoldedAtScreenRow: (screenRow) ->
     @displayBuffer.isFoldedAtScreenRow(screenRow)
 
-  # TODO: Rename to foldRowRange?
-  createFold: (startRow, endRow) ->
-    @displayBuffer.createFold(startRow, endRow)
-
-  # {Delegates to: DisplayBuffer.destroyFoldWithId}
-  destroyFoldWithId: (id) ->
-    @displayBuffer.destroyFoldWithId(id)
+  foldBufferRowRange: (startRow, endRow) ->
+    @displayBuffer.foldBufferRowRange(startRow, endRow)
 
   # Remove any {Fold}s found that intersect the given buffer range.
   destroyFoldsIntersectingBufferRange: (bufferRange) ->
-    @destroyFoldsContainingBufferRange(bufferRange)
-
-    for row in [bufferRange.end.row..bufferRange.start.row]
-      fold.destroy() for fold in @displayBuffer.foldsStartingAtBufferRow(row)
-
-    return
-
-  # Remove any {Fold}s found that contain the given buffer range.
-  destroyFoldsContainingBufferRange: (bufferRange) ->
-    @unfoldBufferRow(bufferRange.start.row)
-    @unfoldBufferRow(bufferRange.end.row)
-
-  # {Delegates to: DisplayBuffer.largestFoldContainingBufferRow}
-  largestFoldContainingBufferRow: (bufferRow) ->
-    @displayBuffer.largestFoldContainingBufferRow(bufferRow)
-
-  # {Delegates to: DisplayBuffer.largestFoldStartingAtScreenRow}
-  largestFoldStartingAtScreenRow: (screenRow) ->
-    @displayBuffer.largestFoldStartingAtScreenRow(screenRow)
+    @displayLayer.destroyFoldsIntersectingBufferRange(bufferRange)
 
   # {Delegates to: DisplayBuffer.outermostFoldsForBufferRowRange}
   outermostFoldsInBufferRowRange: (startRow, endRow) ->
