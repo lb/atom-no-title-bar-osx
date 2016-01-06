@@ -1,12 +1,12 @@
 {
   "name": "atom",
   "productName": "Atom",
-  "version": "1.3.2",
+  "version": "1.3.2-notitlebar",
   "description": "A hackable text editor for the 21st Century.",
   "main": "./src/browser/main.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/atom/atom.git"
+    "url": "https://github.com/lb/atom-no-title-bar-osx"
   },
   "bugs": {
     "url": "https://github.com/atom/atom/issues"
